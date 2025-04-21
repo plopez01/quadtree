@@ -5,17 +5,18 @@ ArrayList<City> cities = new ArrayList<>();
 
 boolean usingQuadtree = true;
 
-int N_CITIES = 300;
+int N_CITIES = 100;
 
 //int N_CITIES = 100000000;
 // Takes about 250ms to do a query
 
-int searchRadius = 100;
+int searchRadius = 300;
 
 QNode quadtree;
-int BUCKET_SIZE = 3;
+int BUCKET_SIZE = 5;
 
 int iters = 0;
+int nodesVisited = 0;
 
 void setup() {
   size(640, 480, P2D);
@@ -46,8 +47,10 @@ void draw() {
   drawQuadtree(quadtree);
 
   iters = 0;
+  nodesVisited = 0;
   queryCitiesInRadius(new PVector(mouseX, mouseY), searchRadius);
   println("Iters made to search: " + iters);
+  if (usingQuadtree) println("Nodes visited: " + nodesVisited);
 }
 
 void queryCitiesInRadius(PVector pos, float radius) {
@@ -84,28 +87,26 @@ boolean intersectsCircle(PVector circlePos, float radius, PVector rectPos, PVect
 
 void treeImpl(QNode root, PVector pos, float radius) {
   // First we find the square that fits the given circle
-  /*PVector start = new PVector(pos.x - radius, pos.y - radius);
-   float size = 2 * radius;
-   
-   square(start.x, start.y, size);*/
-
+  nodesVisited++;
+  
+  PVector start = root.start;
+  PVector size = root.size;
+  
+  // If circle doesn't intersect with current checked quad stop looking
+  if (!intersectsCircle(pos, radius, start, size)) return;
+  
+  // If we got to a leaf, we search.
   if (root.isLeaf()) {
-    PVector start = root.start;
-    PVector size = root.size;
-
-    if (intersectsCircle(pos, radius, start, size))
-    {
-      // Leaf quad intersects with query circle
-      // Paint it as green to show
-      fill(0, 255, 0, 50);
-      rect(start.x, start.y, size.x, size.y);
-      
-      for (City c : root.cities) {
-        if (PVector.dist(pos, c.pos) <= radius) {
-          c.renderFound();
-        }
-        iters++;
+    // Leaf quad intersects with query circle
+    // Paint it as green to show
+    fill(0, 255, 0, 50);
+    rect(start.x, start.y, size.x, size.y);
+    
+    for (City c : root.cities) {
+      if (PVector.dist(pos, c.pos) <= radius) {
+        c.renderFound();
       }
+      iters++;
     }
   } else {
     // If not leaf traverse tree until we reach the corresponding one
@@ -114,6 +115,7 @@ void treeImpl(QNode root, PVector pos, float radius) {
     treeImpl(root.q3, pos, radius);
     treeImpl(root.q4, pos, radius);
   }
+  
 }
 
 void insertQuadtree(QNode root, City city) {
